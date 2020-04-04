@@ -88,14 +88,16 @@ function callOnChangeProps(action, state, newState) {
 
 function useEnhancedReducer(reducer, initialState, props) {
   const enhancedReducer = useCallback(
-    (state, action) => {
-      state = getState(state, action.props)
+    (state, actionWithProps) => {
+      const {props: propsFromAction, ...action} = actionWithProps
+      const {stateReducer: stateReducerProp} = propsFromAction
 
-      const {stateReducer: stateReduceLocal} = action.props
-      const changes = reducer(state, action)
-      const newState = stateReduceLocal(state, {...action, changes})
+      state = getState(state, propsFromAction)
 
-      callOnChangeProps(action, state, newState)
+      const changes = reducer(state, actionWithProps)
+      const newState = stateReducerProp(state, {...action, changes})
+
+      callOnChangeProps(actionWithProps, state, newState)
 
       return newState
     },
