@@ -649,6 +649,7 @@ describe('props', () => {
       expect(onSelectedItemChange).toHaveBeenCalledWith(
         expect.objectContaining({
           selectedItem: items[itemIndex],
+          type: stateChangeTypes.ItemClick,
         }),
       )
     })
@@ -681,6 +682,7 @@ describe('props', () => {
       expect(onHighlightedIndexChange).toHaveBeenCalledWith(
         expect.objectContaining({
           highlightedIndex: 0,
+          type: stateChangeTypes.InputKeyDownArrowDown,
         }),
       )
     })
@@ -721,6 +723,7 @@ describe('props', () => {
       expect(onIsOpenChange).toHaveBeenCalledWith(
         expect.objectContaining({
           isOpen: false,
+          type: stateChangeTypes.InputKeyDownEscape,
         }),
       )
     })
