@@ -56,14 +56,16 @@ function capitalizeString(string) {
   return `${string.slice(0, 1).toUpperCase()}${string.slice(1)}`
 }
 
-function invokeOnChangeHandler(key, props, state, newState) {
+function invokeOnChangeHandler(key, action, state, newState) {
+  const {props, type} = action
   const handler = `on${capitalizeString(key)}Change`
+
   if (
     props[handler] &&
     newState[key] !== undefined &&
     newState[key] !== state[key]
   ) {
-    props[handler](newState)
+    props[handler]({type, ...newState})
   }
 }
 
@@ -72,7 +74,7 @@ function callOnChangeProps(action, state, newState) {
   const changes = {}
 
   Object.keys(state).forEach(key => {
-    invokeOnChangeHandler(key, props, state, newState)
+    invokeOnChangeHandler(key, action, state, newState)
 
     if (newState[key] !== state[key]) {
       changes[key] = newState[key]
