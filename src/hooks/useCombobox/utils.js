@@ -1,12 +1,13 @@
 import PropTypes from 'prop-types'
-import {generateId, getA11yStatusMessage} from '../../utils'
+import {getState, generateId, getA11yStatusMessage} from '../../utils'
 import {
   getElementIds as getElementIdsCommon,
   defaultProps as defaultPropsCommon,
   getInitialState as getInitialStateCommon,
+  useEnhancedReducer,
 } from '../utils'
 
-function getElementIds({id, inputId, ...rest}) {
+export function getElementIds({id, inputId, ...rest}) {
   const uniqueId = id === undefined ? `downshift-${generateId()}` : id
 
   return {
@@ -15,7 +16,7 @@ function getElementIds({id, inputId, ...rest}) {
   }
 }
 
-function getInitialState(props) {
+export function getInitialState(props) {
   const initialState = getInitialStateCommon(props)
   const {selectedItem} = initialState
   let {inputValue} = initialState
@@ -36,7 +37,20 @@ function getInitialState(props) {
   }
 }
 
-const propTypes = {
+export function useControlledReducer(reducer, initialState, props) {
+  const [state, dispatch] = useEnhancedReducer(reducer, initialState, props)
+
+  if (
+    props.selectedItem !== undefined &&
+    state.selectedItem !== props.selectedItem
+  ) {
+    state.inputValue = props.itemToString(props.selectedItem)
+  }
+
+  return [getState(state, props), dispatch]
+}
+
+export const propTypes = {
   items: PropTypes.array.isRequired,
   itemToString: PropTypes.func,
   getA11yStatusMessage: PropTypes.func,
@@ -77,10 +91,8 @@ const propTypes = {
   }),
 }
 
-const defaultProps = {
+export const defaultProps = {
   ...defaultPropsCommon,
   getA11yStatusMessage,
   circularNavigation: true,
 }
-
-export {getInitialState, propTypes, defaultProps, getElementIds}

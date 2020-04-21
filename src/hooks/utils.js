@@ -64,7 +64,9 @@ function stateReducer(s, a) {
 function getA11ySelectionMessage(selectionParameters) {
   const {selectedItem, itemToString: itemToStringLocal} = selectionParameters
 
-  return selectedItem ? `${itemToStringLocal(selectedItem)} has been selected.` : ''
+  return selectedItem
+    ? `${itemToStringLocal(selectedItem)} has been selected.`
+    : ''
 }
 
 /**
@@ -141,7 +143,13 @@ export function useEnhancedReducer(reducer, initialState, props) {
   const [state, dispatch] = useReducer(enhancedReducer, initialState)
   const dispatchWithProps = action => dispatch({props, ...action})
 
-  return [getState(state, props), dispatchWithProps]
+  return [state, dispatchWithProps]
+}
+
+export function useControlledReducer(reducer, initialState, props) {
+  const [state, dispatch] = useEnhancedReducer(reducer, initialState, props)
+
+  return [getState(state, props), dispatch]
 }
 
 export const defaultProps = {
