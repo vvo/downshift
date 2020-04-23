@@ -257,7 +257,11 @@ handler. Items are added using `addSelectedItem` callback inside the
               </span>
             </span>
           ))}
-          <button {...getToggleButtonProps(getDropdownProps({preventKeyAction: isOpen}))}>
+          <button
+            {...getToggleButtonProps(
+              getDropdownProps({preventKeyAction: isOpen}),
+            )}
+          >
             {selectedItem || 'Elements'}
           </button>
           <ul {...getMenuProps()} style={menuMultipleStlyes}>
