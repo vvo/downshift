@@ -28,7 +28,6 @@ between them, screen reader support, highlight by character keys etc.
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-
 - [Usage](#usage)
 - [Basic Props](#basic-props)
   - [items](#items)
@@ -74,7 +73,7 @@ between them, screen reader support, highlight by character keys etc.
 > [Try it out in the browser][sandbox-example]
 
 ```jsx
-import React from 'react'
+import * as React from 'react'
 import {render} from 'react-dom'
 import {useSelect} from 'downshift'
 // items = ['Neptunium', 'Plutonium', ...]
@@ -133,12 +132,15 @@ index, like in `Downshift`.
 
 ### itemToString
 
-> `function(item: any)` | defaults to: `i => (i == null ? '' : String(i))`
+> `function(item: any)` | defaults to: `item => (item ? String(item) : '')`
 
-Used to determine the string value for the selected item. It is used to compute
-the accessibility message that occurs after selecting the item. It is also used
-to allow highlighting by typing character keys, when downshift looks for the
-items whose string version start with the keys typed.
+If your items are stored as, say, objects instead of strings, downshift still
+needs a string representation for each one. This is required for accessibility
+messages (e.g., after making a selection) and keyboard interaction features
+(e.g., highlighting an item by typing its first few characters).
+
+**Note:** This callback _must_ include a null check: it is invoked with `null`
+whenever the user abandons input via `<Esc>`.
 
 ### onSelectedItemChange
 
@@ -255,12 +257,10 @@ reset or when an item is selected.
 This function is passed as props to a `Status` component nested within and
 allows you to create your own assertive ARIA statuses.
 
-A default `getA11yStatusMessage` function is provided. It is called with the
-parameters `items`, `isOpen`, `selectedItem` and `itemToString` when either
-`isOpen` changes. When menu is opened, the announcement message is "No results"
-if there aren't any items or "`resultCount` results are available, use up and
-down arrow keys to navigate. Press Enter key to select." depending on the number
-of items in the menu.
+A default `getA11yStatusMessage` function is provided that will check
+`resultCount` and return "No results are available." or if there are results ,
+"`resultCount` results are available, use up and down arrow keys to navigate.
+Press Enter or Space Bar keys to select."
 
 > Note: `resultCount` is `items.length` in our default version of the function.
 
@@ -271,8 +271,7 @@ of items in the menu.
 This function is similar to the `getA11yStatusMessage` but it is generating a
 message when an item is selected.
 
-A default `getA11ySelectionMessage` function is provided. It is called with the
-parameters `items`, `isOpen`, `selectedItem` and `itemToString` when
+A default `getA11ySelectionMessage` function is provided. It is called when
 `selectedItem` changes. When an item is selected, the message is a selection
 related one, narrating "`itemToString(selectedItem)` has been selected".
 
@@ -282,12 +281,16 @@ properties:
 
 <!-- This table was generated via http://www.tablesgenerator.com/markdown_tables -->
 
-| property       | type            | description                                                                                  |
-| -------------- | --------------- | -------------------------------------------------------------------------------------------- |
-| `items`        | `any[]`         | The items in the list.                                                                       |
-| `isOpen`       | `boolean`       | The `isOpen` state                                                                           |
-| `itemToString` | `function(any)` | The `itemToString` function (see props) for getting the string value from one of the options |
-| `selectedItem` | `any`           | The value of the currently selected item                                                     |
+| property              | type            | description                                                                                  |
+| --------------------- | --------------- | -------------------------------------------------------------------------------------------- |
+| `highlightedIndex`    | `number`        | The currently highlighted index                                                              |
+| `highlightedItem`     | `any`           | The value of the highlighted item                                                            |
+| `inputValue`          | `string`        | The current input value                                                                      |
+| `isOpen`              | `boolean`       | The `isOpen` state                                                                           |
+| `itemToString`        | `function(any)` | The `itemToString` function (see props) for getting the string value from one of the options |
+| `previousResultCount` | `number`        | The total items showing in the dropdown the last time the status was updated                 |
+| `resultCount`         | `number`        | The total items showing in the dropdown                                                      |
+| `selectedItem`        | `any`           | The value of the currently selected item                                                     |
 
 ### onHighlightedIndexChange
 
@@ -328,7 +331,7 @@ again or hitting Escape key.
 
 This function is called anytime the internal state changes. This can be useful
 if you're using downshift as a "controlled" component, where you manage some or
-all of the state (e.g. isOpen, selectedItem, highlightedIndex, etc) and then
+all of the state (e.g., isOpen, selectedItem, highlightedIndex, etc) and then
 pass it as props, rather than letting downshift control all its state itself.
 
 - `changes`: These are the properties that actually have changed since the last
@@ -371,10 +374,9 @@ The item that should be selected.
 
 > `string` | defaults to a generated ID
 
-Used to generate the first part of the `Downshift` id on the elements. Uses the
-[@reach/auto-id][reach-auto-id] implementation by default. You can override this
-`id` with one of your own, provided as a prop, or you can override the `id` for
-each element altogether using the props below.
+Used to generate the first part of the `Downshift` id on the elements. You can
+override this `id` with one of your own, provided as a prop, or you can override
+the `id` for each element altogether using the props below.
 
 ### labelId
 
@@ -457,7 +459,7 @@ The list of all possible values this `type` property can take is defined in
 - `useSelect.stateChangeTypes.FunctionCloseMenu`
 - `useSelect.stateChangeTypes.FunctionSetHighlightedIndex`
 - `useSelect.stateChangeTypes.FunctionSelectItem`
-- `useSelect.stateChangeTypes.FunctionClearKeysSoFar`
+- `useSelect.stateChangeTypes.FunctionSetInputValue`
 - `useSelect.stateChangeTypes.FunctionReset`
 
 See [`stateReducer`](#statereducer) for a concrete example on how to use the
@@ -465,13 +467,12 @@ See [`stateReducer`](#statereducer) for a concrete example on how to use the
 
 ## Control Props
 
-Downshift manages its own state internally and calls your `onChange` and
-`onStateChange` handlers with any relevant changes. The state that downshift
-manages includes: `isOpen`, `selectedItem` and `highlightedIndex`. Returned
-action function (read more below) can be used to manipulate this state and can
-likely support many of your use cases. `keysSoFar` is a special case that is
-used for keeping all the character keys typed at an interval smaller than 500ms.
-It's not something you need to bother with.
+Downshift manages its own state internally and calls your
+`onSelectedItemChange`, `onIsOpenChange`, `onHighlightedIndexChange`,
+`onInputChange` and `onStateChange` handlers with any relevant changes. The
+state that downshift manages includes: `isOpen`, `selectedItem`, `inputValue`
+and `highlightedIndex`. Returned action function (read more below) can be used
+to manipulate this state and can likely support many of your use cases.
 
 However, if more control is needed, you can pass any of these pieces of state as
 a prop (as indicated above) and that state becomes controlled. As soon as
@@ -835,8 +836,6 @@ const ui = (
 
 [select-aria]:
   https://www.w3.org/TR/wai-aria-practices/examples/listbox/listbox-collapsible.html
-[reach-auto-id]:
-  https://github.com/reach/reach-ui/blob/master/packages/auto-id/src/index.js
 [sandbox-example]: https://codesandbox.io/s/53qfj
 [state-change-file]:
   https://github.com/downshift-js/downshift/blob/master/src/hooks/useSelect/stateChangeTypes.js

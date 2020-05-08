@@ -5,16 +5,16 @@ import {
   getItemIndex,
   getPropTypesValidator,
   isAcceptedCharacterKey,
-  useEnhancedReducer,
+  useControlledReducer,
   getInitialState,
+  updateA11yStatus,
+  useMouseAndTouchTracker,
 } from '../utils'
-import setStatus from '../../set-a11y-status'
 import {
   callAllEventHandlers,
   handleRefs,
   debounce,
   normalizeArrowKey,
-  targetWithinDownshift,
 } from '../../utils'
 import downshiftSelectReducer from './reducer'
 import {propTypes, defaultProps} from './utils'
@@ -39,13 +39,13 @@ function useSelect(userProps = {}) {
   }
   const {
     items,
-    itemToString,
-    getA11yStatusMessage,
-    getA11ySelectionMessage,
     scrollIntoView,
     environment,
     initialIsOpen,
     defaultIsOpen,
+    itemToString,
+    getA11ySelectionMessage,
+    getA11yStatusMessage,
   } = props
   // Initial state depending on controlled props.
   const initialState = getInitialState(props)
@@ -54,61 +54,67 @@ function useSelect(userProps = {}) {
   const [
     {isOpen, highlightedIndex, selectedItem, inputValue},
     dispatch,
-  ] = useEnhancedReducer(downshiftSelectReducer, initialState, props)
+  ] = useControlledReducer(downshiftSelectReducer, initialState, props)
 
-  /* Refs */
+  // Refs
   const toggleButtonRef = useRef(null)
   const menuRef = useRef(null)
-  const isInitialMount = useRef(true)
-  const shouldScroll = useRef(true)
-  const clearTimeout = useRef(null)
-  const mouseAndTouchTrackers = useRef({
-    isMouseDown: false,
-    isTouchMove: false,
-  })
-  const elementIds = useRef(getElementIds(props))
+  const isInitialMountRef = useRef(true)
+  const shouldScrollRef = useRef(true)
+  const shouldBlurRef = useRef(true)
+  const clearTimeoutRef = useRef(null)
+  const elementIdsRef = useRef(getElementIds(props))
+  const previousResultCountRef = useRef()
 
   // Some utils.
   const getItemNodeFromIndex = index =>
-    environment.document.getElementById(elementIds.current.getItemId(index))
+    environment.document.getElementById(elementIdsRef.current.getItemId(index))
 
-  /* Effects */
-  /* Sets a11y status message on changes in isOpen. */
+  // Effects.
+  /* Sets a11y status message on changes in state. */
   useEffect(() => {
-    if (isInitialMount.current) {
+    if (isInitialMountRef.current) {
       return
     }
 
-    setStatus(
-      getA11yStatusMessage({
-        highlightedIndex,
-        inputValue,
-        isOpen,
-        itemToString,
-        resultCount: items.length,
-        highlightedItem: items[highlightedIndex],
-        selectedItem,
-      }),
+    const previousResultCount = previousResultCountRef.current
+
+    updateA11yStatus(
+      () =>
+        getA11yStatusMessage({
+          isOpen,
+          highlightedIndex,
+          selectedItem,
+          inputValue,
+          highlightedItem: items[highlightedIndex],
+          resultCount: items.length,
+          itemToString,
+          previousResultCount,
+        }),
       environment.document,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen])
+  }, [isOpen, highlightedIndex, selectedItem, inputValue])
   /* Sets a11y status message on changes in selectedItem. */
   useEffect(() => {
-    if (isInitialMount.current) {
+    if (isInitialMountRef.current) {
       return
     }
 
-    setStatus(
-      getA11ySelectionMessage({
-        highlightedIndex,
-        inputValue,
-        isOpen,
-        itemToString,
-        resultCount: items.length,
-        highlightedItem: items[highlightedIndex],
-        selectedItem,
-      }),
+    const previousResultCount = previousResultCountRef.current
+
+    updateA11yStatus(
+      () =>
+        getA11ySelectionMessage({
+          isOpen,
+          highlightedIndex,
+          selectedItem,
+          inputValue,
+          highlightedItem: items[highlightedIndex],
+          resultCount: items.length,
+          itemToString,
+          previousResultCount,
+        }),
       environment.document,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -116,8 +122,8 @@ function useSelect(userProps = {}) {
   /* Sets cleanup for the keysSoFar after 500ms. */
   useEffect(() => {
     // init the clean function here as we need access to dispatch.
-    if (isInitialMount.current) {
-      clearTimeout.current = debounce(outerDispatch => {
+    if (isInitialMountRef.current) {
+      clearTimeoutRef.current = debounce(outerDispatch => {
         outerDispatch({
           type: stateChangeTypes.FunctionSetInputValue,
           inputValue: '',
@@ -128,13 +134,13 @@ function useSelect(userProps = {}) {
     if (!inputValue) {
       return
     }
-    clearTimeout.current(dispatch)
+    clearTimeoutRef.current(dispatch)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputValue])
   /* Controls the focus on the menu or the toggle button. */
   useEffect(() => {
     // Don't focus menu on first render.
-    if (isInitialMount.current) {
+    if (isInitialMountRef.current) {
       // Unless it was initialised as open.
       if ((initialIsOpen || defaultIsOpen || isOpen) && menuRef.current) {
         menuRef.current.focus()
@@ -142,15 +148,20 @@ function useSelect(userProps = {}) {
       return
     }
     // Focus menu on open.
-    // istanbul ignore next
-    if (isOpen && menuRef.current) {
-      menuRef.current.focus()
-      // Focus toggleButton on close.
-    } else if (
-      environment.document.activeElement === menuRef.current &&
-      toggleButtonRef.current
-    ) {
-      toggleButtonRef.current.focus()
+    if (isOpen) {
+      // istanbul ignore else
+      if (menuRef.current) {
+        menuRef.current.focus()
+        return
+      }
+    }
+    // Focus toggleButton on close, but on if was closed with (Shift+)Tab.
+    if (environment.document.activeElement === menuRef.current) {
+      // istanbul ignore else
+      if (toggleButtonRef.current) {
+        shouldBlurRef.current = false
+        toggleButtonRef.current.focus()
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
@@ -159,76 +170,35 @@ function useSelect(userProps = {}) {
     if (highlightedIndex < 0 || !isOpen || !items.length) {
       return
     }
-    if (shouldScroll.current === false) {
-      shouldScroll.current = true
+    if (shouldScrollRef.current === false) {
+      shouldScrollRef.current = true
     } else {
       scrollIntoView(getItemNodeFromIndex(highlightedIndex), menuRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightedIndex])
+  useEffect(() => {
+    if (isInitialMountRef.current) {
+      return
+    }
+
+    previousResultCountRef.current = items.length
+  })
   /* Make initial ref false. */
   useEffect(() => {
-    isInitialMount.current = false
+    isInitialMountRef.current = false
   }, [])
   /* Add mouse/touch events to document. */
-  useEffect(() => {
-    // The same strategy for checking if a click occurred inside or outside downsift
-    // as in downshift.js.
-    const onMouseDown = () => {
-      mouseAndTouchTrackers.current.isMouseDown = true
-    }
-    const onMouseUp = event => {
-      mouseAndTouchTrackers.current.isMouseDown = false
-      if (
-        isOpen &&
-        !targetWithinDownshift(
-          event.target,
-          [toggleButtonRef.current, menuRef.current],
-          environment.document,
-        )
-      ) {
-        dispatch({
-          type: stateChangeTypes.MenuBlur,
-        })
-      }
-    }
-    const onTouchStart = () => {
-      mouseAndTouchTrackers.current.isTouchMove = false
-    }
-    const onTouchMove = () => {
-      mouseAndTouchTrackers.current.isTouchMove = true
-    }
-    const onTouchEnd = event => {
-      if (
-        isOpen &&
-        !mouseAndTouchTrackers.current.isTouchMove &&
-        !targetWithinDownshift(
-          event.target,
-          [toggleButtonRef.current, menuRef.current],
-          environment.document,
-          false,
-        )
-      ) {
-        dispatch({
-          type: stateChangeTypes.MenuBlur,
-        })
-      }
-    }
-
-    environment.addEventListener('mousedown', onMouseDown)
-    environment.addEventListener('mouseup', onMouseUp)
-    environment.addEventListener('touchstart', onTouchStart)
-    environment.addEventListener('touchmove', onTouchMove)
-    environment.addEventListener('touchend', onTouchEnd)
-
-    return function cleanup() {
-      environment.removeEventListener('mousedown', onMouseDown)
-      environment.removeEventListener('mouseup', onMouseUp)
-      environment.removeEventListener('touchstart', onTouchStart)
-      environment.removeEventListener('touchmove', onTouchMove)
-      environment.removeEventListener('touchend', onTouchEnd)
-    }
-  })
+  const mouseAndTouchTrackersRef = useMouseAndTouchTracker(
+    isOpen,
+    [menuRef, toggleButtonRef],
+    environment,
+    () => {
+      dispatch({
+        type: stateChangeTypes.MenuBlur,
+      })
+    },
+  )
 
   // Event handler functions.
   const toggleButtonKeyDownHandlers = {
@@ -321,7 +291,13 @@ function useSelect(userProps = {}) {
     }
   }
   const menuHandleBlur = () => {
-    const shouldBlur = !mouseAndTouchTrackers.current.isMouseDown
+    // if the blur was a result of selection, we don't trigger this action.
+    if (shouldBlurRef.current === false) {
+      shouldBlurRef.current = true
+      return
+    }
+
+    const shouldBlur = !mouseAndTouchTrackersRef.current.isMouseDown
     /* istanbul ignore else */
     if (shouldBlur) {
       dispatch({type: stateChangeTypes.MenuBlur})
@@ -353,7 +329,7 @@ function useSelect(userProps = {}) {
     if (index === highlightedIndex) {
       return
     }
-    shouldScroll.current = false
+    shouldScrollRef.current = false
     dispatch({
       type: stateChangeTypes.ItemMouseMove,
       index,
@@ -407,8 +383,8 @@ function useSelect(userProps = {}) {
   }
   // Getter functions.
   const getLabelProps = labelProps => ({
-    id: elementIds.current.labelId,
-    htmlFor: elementIds.current.toggleButtonId,
+    id: elementIdsRef.current.labelId,
+    htmlFor: elementIdsRef.current.toggleButtonId,
     ...labelProps,
   })
   const getMenuProps = ({
@@ -422,13 +398,15 @@ function useSelect(userProps = {}) {
     [refKey]: handleRefs(ref, menuNode => {
       menuRef.current = menuNode
     }),
-    id: elementIds.current.menuId,
+    id: elementIdsRef.current.menuId,
     role: 'listbox',
-    'aria-labelledby': elementIds.current.labelId,
+    'aria-labelledby': elementIdsRef.current.labelId,
     tabIndex: -1,
     ...(isOpen &&
       highlightedIndex > -1 && {
-        'aria-activedescendant': elementIds.current.getItemId(highlightedIndex),
+        'aria-activedescendant': elementIdsRef.current.getItemId(
+          highlightedIndex,
+        ),
       }),
     onMouseLeave: callAllEventHandlers(onMouseLeave, menuHandleMouseLeave),
     onKeyDown: callAllEventHandlers(onKeyDown, menuHandleKeyDown),
@@ -446,10 +424,10 @@ function useSelect(userProps = {}) {
       [refKey]: handleRefs(ref, toggleButtonNode => {
         toggleButtonRef.current = toggleButtonNode
       }),
-      id: elementIds.current.toggleButtonId,
+      id: elementIdsRef.current.toggleButtonId,
       'aria-haspopup': 'listbox',
       'aria-expanded': isOpen,
-      'aria-labelledby': `${elementIds.current.labelId} ${elementIds.current.toggleButtonId}`,
+      'aria-labelledby': `${elementIdsRef.current.labelId} ${elementIdsRef.current.toggleButtonId}`,
       ...rest,
     }
 
@@ -474,7 +452,7 @@ function useSelect(userProps = {}) {
     const itemProps = {
       role: 'option',
       'aria-selected': `${itemIndex === highlightedIndex}`,
-      id: elementIds.current.getItemId(itemIndex),
+      id: elementIdsRef.current.getItemId(itemIndex),
       ...rest,
     }
 

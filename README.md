@@ -1,11 +1,11 @@
 <h1 align="center">
   downshift 🏎
   <br>
-  <img src="https://downshift.netlify.com/logo/downshift.svg" alt="downshift logo" title="downshift logo" width="300">
+  <img src="https://downshift.netlify.app/logo/downshift.svg" alt="downshift logo" title="downshift logo" width="300">
   <br>
 </h1>
 <p align="center" style="font-size: 1.2rem;">Primitives to build simple, flexible, WAI-ARIA compliant React
-autocomplete/dropdown/select/combobox components</p>
+autocomplete, combobox or select dropdown components.</p>
 
 > See
 > [the intro blog post](https://kentcdodds.com/blog/introducing-downshift-for-react)
@@ -30,9 +30,10 @@ autocomplete/dropdown/select/combobox components</p>
 
 ## The problem
 
-You need an autocomplete/dropdown/select experience in your application and you
+You need an autocomplete/combobox/select experience in your application and you
 want it to be accessible. You also want it to be simple and flexible to account
-for your use cases.
+for your use cases. Finally, it should follow the [ARIA design
+pattern][combobox-aria] for a combobox.
 
 ## This solution
 
@@ -40,14 +41,15 @@ This library provides its users two main sets of solutions: the `Downshift`
 component and a set of hooks. The component is still the main part of the
 library, providing autocomplete/combobox logic as a render prop. The hooks are
 newer and are going to be the way forward to provide accessibility logic to
-widgets. Right now we support `useSelect` for `<select>` components and
-`useCombobox` for combobox/autocomplete.
+widgets. Right now we support `useSelect` for `select` components, `useCombobox`
+for `combobox/autocomplete` and `useMultipleSelection` to make multiple
+selection easier for the first two experiences.
 
-Since `useCombobox` and `<Downshift />` aim to provide accessibility to the same
-kind of widget, we suggest trying the new `useCombobox` and if you feel that
-`<Downshift />` still covers your use case better then use that instead. Both of
-them are actively maintained but we are cool kids from the future and prefer to
-share `React` logic via hooks.
+Since `useCombobox` and the component `Downshift` aim to provide accessibility
+to the same kind of widget, we suggest trying the new `useCombobox` and if you
+feel that `Downshift` still covers your use case better then use that instead.
+Both of them are actively maintained but we are cool kids from the future and
+prefer to share `React` logic via hooks.
 
 The `README` on this page is only for the component while each hook has its own
 `README` file, check below. But they are similar in many concepts so you can
@@ -77,11 +79,12 @@ specific dropdown variation and be named accordingly: `useSelect`,
 `useCombobox`, `useMultipleSelection` etc.
 
 You can check the progress in the [hooks page][hooks-readme] and contribute! If
-you want to create a custom `<select>` or `combobox autocomplete` dropdown and
-want it to be functional and accessible, jump directly to the already
-implemented [useSelect][useselect-readme] and [useCombobox][combobox-readme].
-For more examples of how to use the hooks check out our
-[docsite](https://downshift.netlify.com/)!
+you want to create a custom `select` or `combobox/autocomplete` dropdown, with
+the possibility of multiple selection, and want it to be functional and
+accessible, jump directly to the already implemented
+[useSelect][useselect-readme], [useCombobox][combobox-readme] and
+[useMultipleSelection][multiple-selection-readme]. For more examples of how to
+use the hooks check out our [docsite](https://downshift.netlify.app/)!
 
 ### Bundle size concerns
 
@@ -96,7 +99,6 @@ the library treeshaked (pruned) and given only the code you need. Since version
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -164,8 +166,8 @@ should be installed as one of your project's `dependencies`:
 npm install --save downshift
 ```
 
-> This package also depends on `react`. Please make sure you
-> have it installed as well.
+> This package also depends on `react`. Please make sure you have it installed
+> as well.
 
 > Note also this library supports `preact` out of the box. If you are using
 > `preact` then use the corresponding module in the `preact/dist` folder. You
@@ -176,7 +178,7 @@ npm install --save downshift
 > [Try it out in the browser](https://codesandbox.io/s/simple-downshift-with-getrootprops-example-24s13)
 
 ```jsx
-import React from 'react'
+import * as React from 'react'
 import {render} from 'react-dom'
 import Downshift from 'downshift'
 
@@ -249,7 +251,7 @@ The previous example without `getRootProps` is
 > Warning: The example without `getRootProps` is not fully accessible with
 > screen readers as it's not possible to achieve a correct HTML structure for
 > the combobox. Examples on how to use `Downshift` component with and without
-> `getRootProps` are on the [docsite](https://downshift.netlify.com/).
+> `getRootProps` are on the [docsite](https://downshift.netlify.app/).
 
 `<Downshift />` is the only component exposed by this package. It doesn't render
 anything itself, it just calls the render function and renders that. ["Use a
@@ -270,10 +272,13 @@ the section "[Children Function](#children-function)".
 
 ### itemToString
 
-> `function(item: any)` | defaults to: `i => (i == null ? '' : String(i))`
+> `function(item: any)` | defaults to: `item => (item ? String(item) : '')`
 
-Used to determine the string value for the selected item (which is used to
-compute the `inputValue`).
+If your items are stored as, say, objects instead of strings, downshift still
+needs a string representation for each one (e.g., to set `inputValue`).
+
+**Note:** This callback _must_ include a null check: it is invoked with `null`
+whenever the user abandons input via `<Esc>`.
 
 ### onChange
 
@@ -397,10 +402,9 @@ This function is passed as props to a `Status` component nested within and
 allows you to create your own assertive ARIA statuses.
 
 A default `getA11yStatusMessage` function is provided that will check
-`resultCount` and return "No results." or if there are results but no item is
-highlighted, "`resultCount` results are available, use up and down arrow keys to
-navigate." If an item is highlighted it will run `itemToString(highlightedItem)`
-and display the value of the `highlightedItem`.
+`resultCount` and return "No results are available." or if there are results ,
+"`resultCount` results are available, use up and down arrow keys to navigate.
+Press Enter key to select."
 
 The object you are passed to generate your status message has the following
 properties:
@@ -438,7 +442,7 @@ Called with the item that was selected and the new state of `downshift`. (see
 
 This function is called anytime the internal state changes. This can be useful
 if you're using downshift as a "controlled" component, where you manage some or
-all of the state (e.g. isOpen, selectedItem, highlightedIndex, etc) and then
+all of the state (e.g., isOpen, selectedItem, highlightedIndex, etc) and then
 pass it as props, rather than letting downshift control all its state itself.
 The parameters both take the shape of internal state
 (`{highlightedIndex: number, inputValue: string, isOpen: boolean, selectedItem: any}`)
@@ -1237,7 +1241,7 @@ Thanks goes to these people ([emoji key][emojis]):
     <td align="center"><a href="http://twitter.com/ryanflorence"><img src="https://avatars0.githubusercontent.com/u/100200?v=4" width="100px;" alt=""/><br /><sub><b>Ryan Florence</b></sub></a><br /><a href="#ideas-ryanflorence" title="Ideas, Planning, & Feedback">🤔</a></td>
     <td align="center"><a href="http://jaredforsyth.com"><img src="https://avatars3.githubusercontent.com/u/112170?v=4" width="100px;" alt=""/><br /><sub><b>Jared Forsyth</b></sub></a><br /><a href="#ideas-jaredly" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/downshift-js/downshift/commits?author=jaredly" title="Documentation">📖</a></td>
     <td align="center"><a href="https://github.com/jtmthf"><img src="https://avatars1.githubusercontent.com/u/8162598?v=4" width="100px;" alt=""/><br /><sub><b>Jack Moore</b></sub></a><br /><a href="#example-jtmthf" title="Examples">💡</a></td>
-    <td align="center"><a href="http://travisrayarnold.com"><img src="https://avatars1.githubusercontent.com/u/2762082?v=4" width="100px;" alt=""/><br /><sub><b>Travis Arnold</b></sub></a><br /><a href="https://github.com/downshift-js/downshift/commits?author=souporserious" title="Code">💻</a> <a href="https://github.com/downshift-js/downshift/commits?author=souporserious" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://souporserious.com/"><img src="https://avatars1.githubusercontent.com/u/2762082?v=4" width="100px;" alt=""/><br /><sub><b>Travis Arnold</b></sub></a><br /><a href="https://github.com/downshift-js/downshift/commits?author=souporserious" title="Code">💻</a> <a href="https://github.com/downshift-js/downshift/commits?author=souporserious" title="Documentation">📖</a></td>
     <td align="center"><a href="http://marcysutton.com"><img src="https://avatars0.githubusercontent.com/u/1045233?v=4" width="100px;" alt=""/><br /><sub><b>Marcy Sutton</b></sub></a><br /><a href="https://github.com/downshift-js/downshift/issues?q=author%3Amarcysutton" title="Bug reports">🐛</a> <a href="#ideas-marcysutton" title="Ideas, Planning, & Feedback">🤔</a></td>
     <td align="center"><a href="http://www.jeremygayed.com"><img src="https://avatars2.githubusercontent.com/u/244704?v=4" width="100px;" alt=""/><br /><sub><b>Jeremy Gayed</b></sub></a><br /><a href="#example-tizmagik" title="Examples">💡</a></td>
   </tr>
@@ -1391,11 +1395,17 @@ Thanks goes to these people ([emoji key][emojis]):
     <td align="center"><a href="http://jhonnymoreira.dev"><img src="https://avatars0.githubusercontent.com/u/2177742?v=4" width="100px;" alt=""/><br /><sub><b>Jhonny Moreira</b></sub></a><br /><a href="https://github.com/downshift-js/downshift/commits?author=jhonnymoreira" title="Code">💻</a></td>
     <td align="center"><a href="https://github.com/stefanprobst"><img src="https://avatars0.githubusercontent.com/u/20753323?v=4" width="100px;" alt=""/><br /><sub><b>stefanprobst</b></sub></a><br /><a href="https://github.com/downshift-js/downshift/commits?author=stefanprobst" title="Code">💻</a> <a href="https://github.com/downshift-js/downshift/commits?author=stefanprobst" title="Tests">⚠️</a></td>
     <td align="center"><a href="https://github.com/louisaspicer"><img src="https://avatars1.githubusercontent.com/u/20270031?v=4" width="100px;" alt=""/><br /><sub><b>Louisa Spicer</b></sub></a><br /><a href="https://github.com/downshift-js/downshift/commits?author=louisaspicer" title="Code">💻</a> <a href="https://github.com/downshift-js/downshift/issues?q=author%3Alouisaspicer" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="https://neet.love"><img src="https://avatars2.githubusercontent.com/u/19276905?v=4" width="100px;" alt=""/><br /><sub><b>Ryō Igarashi</b></sub></a><br /><a href="https://github.com/downshift-js/downshift/issues?q=author%3Aneet" title="Bug reports">🐛</a> <a href="https://github.com/downshift-js/downshift/commits?author=neet" title="Code">💻</a></td>
+    <td align="center"><a href="http://ryanlue.com/"><img src="https://avatars2.githubusercontent.com/u/12194123?v=4" width="100px;" alt=""/><br /><sub><b>Ryan Lue</b></sub></a><br /><a href="https://github.com/downshift-js/downshift/commits?author=rlue" title="Documentation">📖</a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/mattleonowicz"><img src="https://avatars3.githubusercontent.com/u/9438872?v=4" width="100px;" alt=""/><br /><sub><b>Mateusz Leonowicz</b></sub></a><br /><a href="https://github.com/downshift-js/downshift/commits?author=mattleonowicz" title="Code">💻</a></td>
   </tr>
 </table>
 
 <!-- markdownlint-enable -->
 <!-- prettier-ignore-end -->
+
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the [all-contributors][all-contributors] specification.
@@ -1464,4 +1474,8 @@ MIT
   https://github.com/downshift-js/downshift/blob/master/src/hooks/useSelect
 [combobox-readme]:
   https://github.com/downshift-js/downshift/tree/master/src/hooks/useCombobox
+[multiple-selection-readme]:
+  https://github.com/downshift-js/downshift/tree/master/src/hooks/useMultipleSelection
 [bundle-phobia-link]: https://bundlephobia.com/result?p=downshift@3.4.8
+[combobox-aria]:
+  https://www.w3.org/TR/wai-aria-practices/examples/combobox/aria1.1pattern/listbox-combo.html

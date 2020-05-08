@@ -1,12 +1,20 @@
+import {useRef} from 'react'
 import PropTypes from 'prop-types'
-import {generateId, getA11yStatusMessage} from '../../utils'
+import {
+  generateId,
+  getA11yStatusMessage,
+  isControlledProp,
+  getState,
+} from '../../utils'
 import {
   getElementIds as getElementIdsCommon,
   defaultProps as defaultPropsCommon,
   getInitialState as getInitialStateCommon,
+  useEnhancedReducer,
 } from '../utils'
+import {ControlledPropUpdatedSelectedItem} from './stateChangeTypes'
 
-function getElementIds({id, inputId, ...rest}) {
+export function getElementIds({id, inputId, ...rest}) {
   const uniqueId = id === undefined ? `downshift-${generateId()}` : id
 
   return {
@@ -15,7 +23,7 @@ function getElementIds({id, inputId, ...rest}) {
   }
 }
 
-function getInitialState(props) {
+export function getInitialState(props) {
   const initialState = getInitialStateCommon(props)
   const {selectedItem} = initialState
   let {inputValue} = initialState
@@ -36,7 +44,7 @@ function getInitialState(props) {
   }
 }
 
-const propTypes = {
+export const propTypes = {
   items: PropTypes.array.isRequired,
   itemToString: PropTypes.func,
   getA11yStatusMessage: PropTypes.func,
@@ -77,10 +85,42 @@ const propTypes = {
   }),
 }
 
-const defaultProps = {
+/**
+ * The useCombobox version of useControlledReducer, which also
+ * checks if the controlled prop selectedItem changed between
+ * renders. If so, it will also update inputValue with its
+ * string equivalent. It uses the common useEnhancedReducer to
+ * compute the rest of the state.
+ *
+ * @param {Function} reducer Reducer function from downshift.
+ * @param {Object} initialState Initial state of the hook.
+ * @param {Object} props The hook props.
+ * @returns {Array} An array with the state and an action dispatcher.
+ */
+export function useControlledReducer(reducer, initialState, props) {
+  const previousSelectedItemRef = useRef()
+  const [state, dispatch] = useEnhancedReducer(reducer, initialState, props)
+
+  // ToDo: if needed, make same approach as selectedItemChanged from Downshift.
+  if (isControlledProp(props, 'selectedItem')) {
+    if (previousSelectedItemRef.current !== props.selectedItem) {
+      dispatch({
+        type: ControlledPropUpdatedSelectedItem,
+        inputValue: props.itemToString(props.selectedItem),
+      })
+    }
+
+    previousSelectedItemRef.current =
+      state.selectedItem === previousSelectedItemRef.current
+        ? props.selectedItem
+        : state.selectedItem
+  }
+
+  return [getState(state, props), dispatch]
+}
+
+export const defaultProps = {
   ...defaultPropsCommon,
   getA11yStatusMessage,
   circularNavigation: true,
 }
-
-export {getInitialState, propTypes, defaultProps, getElementIds}

@@ -1,4 +1,4 @@
-import React from 'react'
+import * as React from 'react'
 import {render, fireEvent} from '@testing-library/react'
 import Downshift from '../'
 
@@ -385,6 +385,32 @@ test('enter on an input with an open menu does nothing without a highlightedInde
   expect(childrenSpy).not.toHaveBeenCalled()
 })
 
+test('enter on an input with an open menu and a highlightedIndex but with IME composing will not select that item', () => {
+  const {enterOnInput, childrenSpy} = renderDownshift({
+    props: {initialIsOpen: true, initialHighlightedIndex: 0},
+  })
+  const extraEventProps = {keyCode: 229}
+  childrenSpy.mockClear()
+
+  // Enter but for IME
+  enterOnInput(extraEventProps)
+
+  // does not even rerender
+  expect(childrenSpy).not.toHaveBeenCalled()
+
+  // Enter without IME
+  enterOnInput()
+
+  // now it behaves normally
+  expect(childrenSpy).toHaveBeenCalledTimes(1)
+  expect(childrenSpy).toHaveBeenCalledWith(expect.objectContaining({
+    selectedItem: colors[0],
+    inputValue: colors[0],
+    isOpen: false,
+    highlightedIndex: null,
+  }))
+})
+
 test('enter on an input with an open menu and a highlightedIndex selects that item', () => {
   const onChange = jest.fn()
   const isOpen = true
@@ -577,9 +603,7 @@ test(`getInputProps doesn't include event handlers when disabled is passed (for 
   // eslint-disable-next-line jest/no-if
   if (entry) {
     throw new Error(
-      `getInputProps should not have any props that are callbacks. It has ${
-        entry[0]
-      }.`,
+      `getInputProps should not have any props that are callbacks. It has ${entry[0]}.`,
     )
   }
 })

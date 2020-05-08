@@ -89,7 +89,7 @@ export interface A11yStatusMessageOptions<Item> {
   inputValue: string
   isOpen: boolean
   itemToString: (item: Item) => string
-  previousResultCount?: number
+  previousResultCount: number
   resultCount: number
   highlightedItem: Item
   selectedItem: Item
@@ -287,6 +287,7 @@ export interface UseSelectProps<Item> {
   menuId?: string
   toggleButtonId?: string
   getItemId?: (index: number) => string
+  scrollIntoView?: (node: HTMLElement, menuNode: HTMLElement) => void
   stateReducer?: (
     state: UseSelectState<Item>,
     actionAndChanges: UseSelectStateChangeOptions<Item>,
@@ -406,6 +407,7 @@ export enum UseComboboxStateChangeTypes {
   FunctionSelectItem = '__function_select_item__',
   FunctionSetInputValue = '__function_set_input_value__',
   FunctionReset = '__function_reset__',
+  ControlledPropUpdatedSelectedItem = '__controlled_prop_updated_selected_item__'
 }
 
 export interface UseComboboxProps<Item> {
@@ -432,6 +434,7 @@ export interface UseComboboxProps<Item> {
   toggleButtonId?: string
   inputId?: string
   getItemId?: (index: number) => string
+  scrollIntoView?: (node: HTMLElement, menuNode: HTMLElement) => void
   stateReducer?: (
     state: UseComboboxState<Item>,
     actionAndChanges: UseComboboxStateChangeOptions<Item>,
@@ -527,7 +530,143 @@ export interface UseComboboxInterface {
     FunctionSelectItem: UseComboboxStateChangeTypes.FunctionSelectItem
     FunctionSetInputValue: UseComboboxStateChangeTypes.FunctionSetInputValue
     FunctionReset: UseComboboxStateChangeTypes.FunctionReset
+    ControlledPropUpdatedSelectedItem: UseComboboxStateChangeTypes.ControlledPropUpdatedSelectedItem
   }
 }
 
 export const useCombobox: UseComboboxInterface
+
+// useMultipleSelection types.
+
+export interface UseMultipleSelectionState<Item> {
+  selectedItems: Item[]
+  activeIndex: number
+}
+
+export enum UseMultipleSelectionStateChangeTypes {
+  SelectedItemClick = '__selected_item_click__',
+  SelectedItemKeyDownDelete = '__selected_item_keydown_delete__',
+  SelectedItemKeyDownBackspace = '__selected_item_keydown_backspace__',
+  SelectedItemKeyDownNavigationNext = '__selected_item_keydown_navigation_next__',
+  SelectedItemKeyDownNavigationPrevious = '__selected_item_keydown_navigation_previous__',
+  DropdownKeyDownNavigationPrevious = '__dropdown_keydown_navigation_previous__',
+  DropdownKeyDownBackspace = '__dropdown_keydown_backspace__',
+  DropdownClick = '__dropdown_click__',
+  FunctionAddSelectedItem = '__function_add_selected_item__',
+  FunctionRemoveSelectedItem = '__function_remove_selected_item__',
+  FunctionSetSelectedItems = '__function_set_selected_items__',
+  FunctionSetActiveIndex = '__function_set_active_index__',
+  FunctionReset = '__function_reset__',
+}
+
+export interface UseMultipleSelectionProps<Item> {
+  selectedItems?: Item[]
+  initialSelectedItems?: Item[]
+  defaultSelectedItems?: Item[]
+  itemToString?: (item: Item) => string
+  getA11yRemovalMessage?: (options: A11yRemovalMessage<Item>) => string
+  stateReducer?: (
+    state: UseMultipleSelectionState<Item>,
+    actionAndChanges: UseMultipleSelectionStateChangeOptions<Item>,
+  ) => UseMultipleSelectionState<Item>
+  activeIndex?: number
+  initialActiveIndex?: number
+  defaultActiveIndex?: number
+  onActiveIndexChange?: (changes: UseMultipleSelectionStateChange<Item>) => void
+  onSelectedItemsChange?: (
+    changes: UseMultipleSelectionStateChange<Item>,
+  ) => void
+  onStateChange?: (changes: UseMultipleSelectionStateChange<Item>) => void
+  keyNavigationNext?: string
+  keyNavigationPrevious?: string
+  environment?: Environment
+}
+
+export interface UseMultipleSelectionStateChangeOptions<Item>
+  extends UseMultipleSelectionDispatchAction {
+  changes: Partial<UseMultipleSelectionState<Item>>
+}
+
+export interface UseMultipleSelectionDispatchAction {
+  type: UseMultipleSelectionStateChangeTypes
+  [data: string]: any
+}
+
+export interface UseMultipleSelectionStateChange<Item>
+  extends Partial<UseMultipleSelectionState<Item>> {
+  type: UseMultipleSelectionStateChangeTypes
+}
+
+export interface A11yRemovalMessage<Item> {
+  itemToString: (item: Item) => string
+  resultCount: number
+  activeSelectedItem: Item
+  removedSelectedItem: Item
+  activeIndex: number
+}
+
+export interface UseMultipleSelectionGetSelectedItemPropsOptions<Item>
+  extends React.HTMLProps<HTMLElement>, GetPropsWithRefKey {
+  index?: number
+  selectedItem: Item
+}
+
+export interface UseMultipleSelectionComboboxGetDropdownProps
+  extends GetInputPropsOptions,
+    GetPropsWithRefKey {
+  preventKeyAction?: boolean
+}
+
+export interface UseMultipleSelectionSelectGetDropdownProps
+  extends GetToggleButtonPropsOptions,
+    GetPropsWithRefKey {
+  preventKeyAction?: boolean
+}
+
+export type UseMultipleSelectionGetDropdownProps =
+  | UseMultipleSelectionSelectGetDropdownProps
+  | UseMultipleSelectionComboboxGetDropdownProps
+
+export interface UseMultipleSelectionPropGetters<Item> {
+  getDropdownProps: (options?: UseMultipleSelectionGetDropdownProps) => any
+  getSelectedItemProps: (
+    options: UseMultipleSelectionGetSelectedItemPropsOptions<Item>,
+  ) => any
+}
+
+export interface UseMultipleSelectionActions<Item> {
+  reset: () => void
+  addSelectedItem: (item: Item) => void
+  removeSelectedItem: (item: Item) => void
+  setSelectedItems: (items: Item[]) => void
+  setActiveIndex: (index: number) => void
+}
+
+export type UseMultipleSelectionReturnValue<Item> = UseMultipleSelectionState<
+  Item
+> &
+  UseMultipleSelectionPropGetters<Item> &
+  UseMultipleSelectionActions<Item>
+
+export interface UseMultipleSelectionInterface {
+  <Item>(
+    props: UseMultipleSelectionProps<Item>,
+  ): UseMultipleSelectionReturnValue<Item>
+  stateChangeTypes: {
+    SelectedItemClick: UseMultipleSelectionStateChangeTypes.SelectedItemClick
+    SelectedItemKeyDownDelete: UseMultipleSelectionStateChangeTypes.SelectedItemKeyDownDelete
+    SelectedItemKeyDownBackspace: UseMultipleSelectionStateChangeTypes.SelectedItemKeyDownBackspace
+    SelectedItemKeyDownNavigationNext: UseMultipleSelectionStateChangeTypes.SelectedItemKeyDownNavigationNext
+    SelectedItemKeyDownNavigationPrevious: UseMultipleSelectionStateChangeTypes.SelectedItemKeyDownNavigationPrevious
+    DropdownKeyDownNavigationPrevious: UseMultipleSelectionStateChangeTypes.DropdownKeyDownNavigationPrevious
+    DropdownKeyDownBackspace: UseMultipleSelectionStateChangeTypes.DropdownKeyDownBackspace
+    DropdownClick: UseMultipleSelectionStateChangeTypes.DropdownClick
+    FunctionAddSelectedItem: UseMultipleSelectionStateChangeTypes.FunctionAddSelectedItem
+    FunctionRemoveSelectedItem: UseMultipleSelectionStateChangeTypes.FunctionRemoveSelectedItem
+    FunctionSetSelectedItems: UseMultipleSelectionStateChangeTypes.FunctionSetSelectedItems
+    FunctionSetActiveIndex: UseMultipleSelectionStateChangeTypes.FunctionSetActiveIndex
+    FunctionReset: UseMultipleSelectionStateChangeTypes.FunctionReset
+  }
+}
+
+export const useMultipleSelection: UseMultipleSelectionInterface

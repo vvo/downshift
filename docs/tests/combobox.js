@@ -1,7 +1,7 @@
-import React, {Component} from 'react'
+import * as React from 'react'
 import Downshift from '../../src'
 
-class Combobox extends Component {
+class Combobox extends React.Component {
   state = {
     selectedColor: '',
   }
@@ -101,4 +101,4 @@ class Combobox extends Component {
 export default Combobox
 
 // downshift takes care of the label for us
-/* eslint jsx-a11y/label-has-for:0 */
+/* eslint jsx-a11y/label-has-associated-control:0 */

@@ -58,7 +58,7 @@
       "login": "souporserious",
       "name": "Travis Arnold",
       "avatar_url": "https://avatars1.githubusercontent.com/u/2762082?v=4",
-      "profile": "http://travisrayarnold.com",
+      "profile": "https://souporserious.com/",
       "contributions": [
         "code",
         "doc"
@@ -1219,6 +1219,34 @@
       "contributions": [
         "code",
         "bug"
+      ]
+    },
+    {
+      "login": "neet",
+      "name": "Ryō Igarashi",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/19276905?v=4",
+      "profile": "https://neet.love",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "rlue",
+      "name": "Ryan Lue",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/12194123?v=4",
+      "profile": "http://ryanlue.com/",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "mattleonowicz",
+      "name": "Mateusz Leonowicz",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/9438872?v=4",
+      "profile": "https://github.com/mattleonowicz",
+      "contributions": [
+        "code"
       ]
     }
   ],

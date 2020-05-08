@@ -1,4 +1,4 @@
-import React from 'react'
+import * as React from 'react'
 import {render, fireEvent} from '@testing-library/react'
 import {renderHook} from '@testing-library/react-hooks'
 import userEvent from '@testing-library/user-event'
@@ -22,8 +22,11 @@ jest.mock('../../utils', () => {
 })
 
 const renderCombobox = (props, uiCallback) => {
-  const ui = <DropdownCombobox {...props} />
+  const renderSpy = jest.fn()
+  const ui = <DropdownCombobox renderSpy={renderSpy} {...props} />
   const wrapper = render(uiCallback ? uiCallback(ui) : ui)
+  const rerender = newProps =>
+    wrapper.rerender(<DropdownCombobox renderSpy={renderSpy} {...newProps} />)
   const label = wrapper.getByText(/choose an element/i)
   const menu = wrapper.getByRole('listbox')
   const toggleButton = wrapper.getByTestId(dataTestIds.toggleButton)
@@ -63,6 +66,8 @@ const renderCombobox = (props, uiCallback) => {
 
   return {
     ...wrapper,
+    renderSpy,
+    rerender,
     label,
     menu,
     toggleButton,
@@ -82,7 +87,7 @@ const renderCombobox = (props, uiCallback) => {
   }
 }
 
-const DropdownCombobox = props => {
+const DropdownCombobox = ({renderSpy, ...props}) => {
   const {
     isOpen,
     getToggleButtonProps,
@@ -94,6 +99,8 @@ const DropdownCombobox = props => {
     getItemProps,
   } = useCombobox({items, ...props})
   const {itemToString} = props.itemToString ? props : defaultProps
+
+  renderSpy()
 
   return (
     <div>
@@ -134,4 +141,4 @@ const renderUseCombobox = props => {
   return renderHook(() => useCombobox({items, ...props}))
 }
 
-export {renderUseCombobox, dataTestIds, renderCombobox, DropdownCombobox}
+export {renderUseCombobox, dataTestIds, renderCombobox}

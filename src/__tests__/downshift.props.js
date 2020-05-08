@@ -1,7 +1,7 @@
 // this is stuff that I couldn't think fit anywhere else
 // but we still want to have tested.
 
-import React from 'react'
+import * as React from 'react'
 import {render, fireEvent} from '@testing-library/react'
 import Downshift from '../'
 
@@ -58,7 +58,7 @@ test('onChange only called when the selection changes', () => {
   expect(handleChange).toHaveBeenCalledTimes(0)
 })
 
-test('onSelect called whenever selection happens, even if the item is the same ', () => {
+test('onSelect called whenever selection happens, even if the item is the same', () => {
   const handleSelect = jest.fn()
   const {selectItem} = setup({
     onSelect: handleSelect,

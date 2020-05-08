@@ -1,5 +1,5 @@
 /* eslint-disable jest/no-disabled-tests */
-import React from 'react'
+import * as React from 'react'
 import {act} from '@testing-library/react-hooks'
 import {fireEvent, cleanup} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -664,6 +664,48 @@ describe('getInputProps', () => {
         )
       })
 
+      test('enter while IME composing will not select highlighted item', () => {
+        const initialHighlightedIndex = 2
+        const {keyDownOnInput, input, getItems} = renderCombobox({
+          initialHighlightedIndex,
+          initialIsOpen: true,
+        })
+
+        keyDownOnInput('Enter', {keyCode: 229})
+
+        expect(input.value).toEqual('')
+        expect(getItems()).toHaveLength(items.length)
+        expect(input).toHaveAttribute(
+          'aria-activedescendant',
+          defaultIds.getItemId(initialHighlightedIndex),
+        )
+
+        keyDownOnInput('Enter')
+
+        expect(input.value).toEqual(items[2])
+        expect(getItems()).toHaveLength(0)
+        expect(input).not.toHaveAttribute('aria-activedescendant')
+      })
+
+      test('enter on an input with a closed menu does nothing', () => {
+        const {keyDownOnInput, renderSpy} = renderCombobox({
+          initialHighlightedIndex: 2,
+          initialIsOpen: false,
+        })
+        expect(renderSpy).toHaveBeenCalledTimes(1)
+        keyDownOnInput('Enter')
+        expect(renderSpy).toHaveBeenCalledTimes(1)
+      })
+
+      test('enter on an input with an open menu does nothing without a highlightedIndex', () => {
+        const {keyDownOnInput, renderSpy} = renderCombobox({
+          initialIsOpen: true,
+        })
+        expect(renderSpy).toHaveBeenCalledTimes(1)
+        keyDownOnInput('Enter')
+        expect(renderSpy).toHaveBeenCalledTimes(1)
+      })
+
       test('tab it closes the menu and selects highlighted item', () => {
         const initialHighlightedIndex = 2
         const {input, getItems} = renderCombobox(
@@ -753,13 +795,13 @@ describe('getInputProps', () => {
         expect(input.value).toEqual('')
       })
 
-      test('the value in the input will stay the same', () => {
+      test('the value in the input will stay the same', async () => {
         const inputValue = 'test me'
         const {blurInput, changeInputValue, input} = renderCombobox({
           initialIsOpen: true,
         })
 
-        changeInputValue(inputValue)
+        await changeInputValue(inputValue)
         blurInput()
 
         expect(input.value).toBe(inputValue)

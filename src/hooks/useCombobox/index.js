@@ -1,15 +1,20 @@
 /* eslint-disable max-statements */
 import {useRef, useEffect} from 'react'
 import {isPreact, isReactNative} from '../../is.macro'
-import setStatus from '../../set-a11y-status'
+import {handleRefs, normalizeArrowKey, callAllEventHandlers} from '../../utils'
 import {
-  handleRefs,
-  normalizeArrowKey,
-  callAllEventHandlers,
-  targetWithinDownshift,
-} from '../../utils'
-import {getItemIndex, getPropTypesValidator, useEnhancedReducer} from '../utils'
-import {getInitialState, propTypes, defaultProps, getElementIds} from './utils'
+  getItemIndex,
+  getPropTypesValidator,
+  updateA11yStatus,
+  useMouseAndTouchTracker,
+} from '../utils'
+import {
+  getInitialState,
+  propTypes,
+  defaultProps,
+  getElementIds,
+  useControlledReducer,
+} from './utils'
 import downshiftUseComboboxReducer from './reducer'
 import * as stateChangeTypes from './stateChangeTypes'
 
@@ -35,10 +40,10 @@ function useCombobox(userProps = {}) {
     defaultIsOpen,
     items,
     scrollIntoView,
-    getA11ySelectionMessage,
-    getA11yStatusMessage,
-    itemToString,
     environment,
+    getA11yStatusMessage,
+    getA11ySelectionMessage,
+    itemToString,
   } = props
   // Initial state depending on controlled props.
   const initialState = getInitialState(props)
@@ -47,7 +52,7 @@ function useCombobox(userProps = {}) {
   const [
     {isOpen, highlightedIndex, selectedItem, inputValue},
     dispatch,
-  ] = useEnhancedReducer(downshiftUseComboboxReducer, initialState, props)
+  ] = useControlledReducer(downshiftUseComboboxReducer, initialState, props)
 
   /* Refs */
   const menuRef = useRef(null)
@@ -58,49 +63,54 @@ function useCombobox(userProps = {}) {
   itemRefs.current = []
   const shouldScroll = useRef(true)
   const isInitialMount = useRef(true)
-  const mouseAndTouchTrackers = useRef({
-    isMouseDown: false,
-    isTouchMove: false,
-  })
   const elementIds = useRef(getElementIds(props))
+  const previousResultCountRef = useRef()
 
   /* Effects */
-  /* Sets a11y status message on changes in isOpen. */
+  /* Sets a11y status message on changes in state. */
   useEffect(() => {
     if (isInitialMount.current) {
       return
     }
 
-    setStatus(
-      getA11yStatusMessage({
-        highlightedIndex,
-        inputValue,
-        isOpen,
-        itemToString,
-        resultCount: items.length,
-        highlightedItem: items[highlightedIndex],
-        selectedItem,
-      }),
+    const previousResultCount = previousResultCountRef.current
+
+    updateA11yStatus(
+      () =>
+        getA11yStatusMessage({
+          isOpen,
+          highlightedIndex,
+          selectedItem,
+          inputValue,
+          highlightedItem: items[highlightedIndex],
+          resultCount: items.length,
+          itemToString,
+          previousResultCount,
+        }),
       environment.document,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen])
+  }, [isOpen, highlightedIndex, selectedItem, inputValue])
   /* Sets a11y status message on changes in selectedItem. */
   useEffect(() => {
     if (isInitialMount.current) {
       return
     }
 
-    setStatus(
-      getA11ySelectionMessage({
-        highlightedIndex,
-        inputValue,
-        isOpen,
-        itemToString,
-        resultCount: items.length,
-        highlightedItem: items[highlightedIndex],
-        selectedItem,
-      }),
+    const previousResultCount = previousResultCountRef.current
+
+    updateA11yStatus(
+      () =>
+        getA11ySelectionMessage({
+          isOpen,
+          highlightedIndex,
+          selectedItem,
+          inputValue,
+          highlightedItem: items[highlightedIndex],
+          resultCount: items.length,
+          itemToString,
+          previousResultCount,
+        }),
       environment.document,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,69 +141,27 @@ function useCombobox(userProps = {}) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
-  /* Make initial ref false. */
+  useEffect(() => {
+    if (isInitialMount.current) {
+      return
+    }
+
+    previousResultCountRef.current = items.length
+  })
   useEffect(() => {
     isInitialMount.current = false
   }, [])
   /* Add mouse/touch events to document. */
-  useEffect(() => {
-    // The same strategy for checking if a click occurred inside or outside downsift
-    // as in downshift.js.
-    const onMouseDown = () => {
-      mouseAndTouchTrackers.current.isMouseDown = true
-    }
-    const onMouseUp = event => {
-      mouseAndTouchTrackers.current.isMouseDown = false
-      if (
-        isOpen &&
-        !targetWithinDownshift(
-          event.target,
-          [comboboxRef.current, menuRef.current, toggleButtonRef.current],
-          environment.document,
-        )
-      ) {
-        dispatch({
-          type: stateChangeTypes.InputBlur,
-        })
-      }
-    }
-    const onTouchStart = () => {
-      mouseAndTouchTrackers.current.isTouchMove = false
-    }
-    const onTouchMove = () => {
-      mouseAndTouchTrackers.current.isTouchMove = true
-    }
-    const onTouchEnd = event => {
-      if (
-        isOpen &&
-        !mouseAndTouchTrackers.current.isTouchMove &&
-        !targetWithinDownshift(
-          event.target,
-          [comboboxRef.current, menuRef.current, toggleButtonRef.current],
-          environment.document,
-          false,
-        )
-      ) {
-        dispatch({
-          type: stateChangeTypes.InputBlur,
-        })
-      }
-    }
-
-    environment.addEventListener('mousedown', onMouseDown)
-    environment.addEventListener('mouseup', onMouseUp)
-    environment.addEventListener('touchstart', onTouchStart)
-    environment.addEventListener('touchmove', onTouchMove)
-    environment.addEventListener('touchend', onTouchEnd)
-
-    return function cleanup() {
-      environment.removeEventListener('mousedown', onMouseDown)
-      environment.removeEventListener('mouseup', onMouseUp)
-      environment.removeEventListener('touchstart', onTouchStart)
-      environment.removeEventListener('touchmove', onTouchMove)
-      environment.removeEventListener('touchend', onTouchEnd)
-    }
-  })
+  const mouseAndTouchTrackersRef = useMouseAndTouchTracker(
+    isOpen,
+    [comboboxRef, menuRef, toggleButtonRef],
+    environment,
+    () => {
+      dispatch({
+        type: stateChangeTypes.InputBlur,
+      })
+    },
+  )
 
   const getItemNodeFromIndex = index => itemRefs.current[index]
 
@@ -235,11 +203,18 @@ function useCombobox(userProps = {}) {
       })
     },
     Enter(event) {
-      event.preventDefault()
-      dispatch({
-        type: stateChangeTypes.InputKeyDownEnter,
-        getItemNodeFromIndex,
-      })
+      // if IME composing, wait for next Enter keydown event.
+      if (event.which === 229) {
+        return
+      }
+
+      if (isOpen && highlightedIndex > -1) {
+        event.preventDefault()
+        dispatch({
+          type: stateChangeTypes.InputKeyDownEnter,
+          getItemNodeFromIndex,
+        })
+      }
     },
   }
 
@@ -260,7 +235,7 @@ function useCombobox(userProps = {}) {
   }
   const inputHandleBlur = () => {
     /* istanbul ignore else */
-    if (!mouseAndTouchTrackers.current.isMouseDown) {
+    if (!mouseAndTouchTrackersRef.current.isMouseDown) {
       dispatch({
         type: stateChangeTypes.InputBlur,
       })
@@ -297,7 +272,7 @@ function useCombobox(userProps = {}) {
     }
   }
 
-  // returns
+  // Getter props.
   const getLabelProps = labelProps => ({
     id: elementIds.current.labelId,
     htmlFor: elementIds.current.inputId,

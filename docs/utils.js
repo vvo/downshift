@@ -1,15 +1,8 @@
 import {makeStyles} from '@material-ui/core/styles'
-import ImageIcon from '@material-ui/icons/Image'
-import WorkIcon from '@material-ui/icons/Work'
-import BeachAccessIcon from '@material-ui/icons/BeachAccess'
-import Cake from '@material-ui/icons/Cake'
-import Group from '@material-ui/icons/Group'
-import DirectionsCar from '@material-ui/icons/DirectionsCar'
 
-const menuStyles = {
+export const menuStyles = {
   maxHeight: '180px',
   overflowY: 'auto',
-  width: '135px',
   margin: 0,
   borderTop: 0,
   background: 'white',
@@ -17,19 +10,33 @@ const menuStyles = {
   zIndex: 1000,
   listStyle: 'none',
   padding: 0,
-  left: '175px',
+  left: '185px',
+  minWidth: '200px',
 }
 
-const comboboxStyles = {display: 'inline-block'}
+export const menuMultipleStlyes = {
+  ...menuStyles,
+  left: '380px',
+}
 
-const playgroundStyles = {height: '160px'}
+export const selectedItemStyles = {
+  marginLeft: '5px',
+  backgroundColor: 'aliceblue',
+  borderRadius: '10px',
+}
 
-const useStyles = makeStyles(theme => ({
+export const selectedItemIconStyles = {cursor: 'pointer'}
+
+export const comboboxStyles = {display: 'inline-block', marginLeft: '5px'}
+
+export const comboboxWrapperStyles = {display: 'inline-flex', flexWrap: 'wrap'}
+
+export const useStyles = makeStyles(theme => ({
   root: {
     width: '100%',
     maxWidth: 300,
     backgroundColor: theme.palette.background.paper,
-    maxHeight: 180,
+    maxHeight: 250,
     overflowY: 'auto',
     position: 'absolute',
     margin: 0,
@@ -47,7 +54,7 @@ const useStyles = makeStyles(theme => ({
   },
 }))
 
-const items = [
+export const items = [
   'Neptunium',
   'Plutonium',
   'Americium',
@@ -76,44 +83,49 @@ const items = [
   'Oganesson',
 ]
 
-const itemsAsObjects = [
+export const itemsAsObjects = [
   {
-    primary: 'Photos',
-    secondary: 'Jan 9, 2014',
-    icon: ImageIcon,
+    primary: 'Cecil Abshire',
+    secondary: 'International Group Associate',
   },
   {
-    primary: 'Work',
-    secondary: 'Jan 7, 2014',
-    icon: WorkIcon,
+    primary: 'Adrain Lueilwitz',
+    secondary: 'Senior Assurance Architect',
   },
   {
-    primary: 'Vacation',
-    secondary: 'July 20, 2014',
-    icon: BeachAccessIcon,
+    primary: 'Caden Smitham',
+    secondary: 'Direct Optimization Engineer',
   },
   {
-    primary: 'Birthday',
-    secondary: 'July 22, 2014',
-    icon: Cake,
+    primary: 'Paula Kuhic',
+    secondary: 'Future Creative Producer',
   },
   {
-    primary: 'Friends',
-    secondary: 'August 12, 2014',
-    icon: Group,
+    primary: 'Stewart Schroeder',
+    secondary: 'Senior Group Director',
   },
   {
-    primary: 'New Car',
-    secondary: 'September 1, 2014',
-    icon: DirectionsCar,
+    primary: 'Rosa Waters',
+    secondary: 'Central Usability Liaison',
+  },
+  {
+    primary: 'Sydney Johnston Jr.',
+    secondary: 'Legacy Tactics Assistant',
+  },
+  {
+    primary: 'Dianna Purdy',
+    secondary: 'Principal Interactions Specialist',
+  },
+  {
+    primary: 'Aurelio Smith',
+    secondary: 'Dynamic Division Technician',
+  },
+  {
+    primary: 'Cathy Schaefer',
+    secondary: 'Product Optimization Engineer',
+  },
+  {
+    primary: 'Ward Turner',
+    secondary: 'Human Mobility Executive',
   },
 ]
-
-export {
-  menuStyles,
-  useStyles,
-  items,
-  itemsAsObjects,
-  playgroundStyles,
-  comboboxStyles,
-}
